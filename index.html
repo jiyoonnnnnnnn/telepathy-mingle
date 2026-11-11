@@ -152,7 +152,7 @@ function viewJoin() {
   app.innerHTML = `
     <div class="top"><span>${esc(S.cfg.title || "텔레파시 게임")}</span><span>지금 <b data-total>${Object.keys(S.presence).length}</b>명 참여 중</span></div>
     <h1>우리 팀을<br>골라 주세요</h1>
-    <div><label class="f" for="nm">닉네임</label><input class="name" id="nm" maxlength="12" placeholder="예) 앨리" value="${esc(m ? m.name : (localStorage.getItem("tp_name") || ""))}"></div>
+    <div><label class="f" for="nm">닉네임</label><input class="name" id="nm" maxlength="12" placeholder="실명 말고 별명으로 써 주세요" value="${esc(m ? m.name : (localStorage.getItem("tp_name") || ""))}"></div>
     <div><span class="f" style="font-size:14px;font-weight:700;display:block;margin-bottom:8px">팀</span>
     <div class="teams">${teams.map(t => `<button type="button" class="team" data-team="${esc(t.id)}" aria-pressed="${t.id === pickTeam}"><b>${esc(t.name)}</b><span data-online="${esc(t.id)}">${online(t.id)}명</span></button>`).join("")}</div></div>
     <p class="err" id="err" role="alert"></p>
