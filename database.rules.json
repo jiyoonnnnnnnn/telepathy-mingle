@@ -1,0 +1,56 @@
+{
+  "rules": {
+    ".read": false,
+    ".write": false,
+
+    "admins": {
+      "$uid": {
+        ".read": "auth != null && auth.uid === $uid"
+      }
+    },
+
+    "config": {
+      ".read": true,
+      ".write": "auth != null && root.child('admins').child(auth.uid).val() === true"
+    },
+
+    "game": {
+      ".read": true,
+      ".write": "auth != null && root.child('admins').child(auth.uid).val() === true"
+    },
+
+    "results": {
+      ".read": true,
+      ".write": "auth != null && root.child('admins').child(auth.uid).val() === true"
+    },
+
+    "players": {
+      ".read": true,
+      ".write": "auth != null && root.child('admins').child(auth.uid).val() === true",
+      "$uid": {
+        ".write": "auth != null && auth.uid === $uid",
+        ".validate": "newData.hasChildren(['name', 'team']) && newData.child('name').isString() && newData.child('name').val().length >= 1 && newData.child('name').val().length <= 12 && root.child('config/teams').child(newData.child('team').val()).exists()"
+      }
+    },
+
+    "presence": {
+      ".read": true,
+      ".write": "auth != null && root.child('admins').child(auth.uid).val() === true",
+      "$uid": {
+        ".write": "auth != null && auth.uid === $uid"
+      }
+    },
+
+    "votes": {
+      ".read": "auth != null && root.child('admins').child(auth.uid).val() === true",
+      ".write": "auth != null && root.child('admins').child(auth.uid).val() === true",
+      "$qid": {
+        "$uid": {
+          ".read": "auth != null && auth.uid === $uid",
+          ".write": "auth != null && auth.uid === $uid && root.child('game/phase').val() === 'question' && root.child('game/qid').val() === $qid && now >= root.child('game/startAt').val() && now <= root.child('game/endsAt').val() + 1000",
+          ".validate": "newData.hasChildren(['o', 't']) && newData.child('o').isNumber() && newData.child('o').val() >= 0 && newData.child('o').val() <= 2 && newData.child('t').val() === root.child('players').child($uid).child('team').val()"
+        }
+      }
+    }
+  }
+}

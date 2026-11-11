@@ -1,0 +1,39 @@
+/* 텔레파시 게임 공용 스타일. 올리브영 라임 그린 + 먹색, 흰 바탕의 미니멀 편집 디자인 */
+:root{
+  --lime:#82D622;
+  --lime-deep:#4C8A0A;
+  --lime-soft:#EEF8E0;
+  --ink:#121511;
+  --sub:#646A5E;
+  --line:#E2E6DB;
+  --paper:#FFFFFF;
+  --soft:#F5F7F1;
+  --fail:#D8462C;
+  --opt-a:#82D622;
+  --opt-b:#121511;
+  --opt-c:#FFC93C;
+  --font:"Pretendard Variable",Pretendard,-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Malgun Gothic","Noto Sans KR",sans-serif;
+  color-scheme:light;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%}
+body{background:var(--paper);color:var(--ink);font-family:var(--font);-webkit-font-smoothing:antialiased;word-break:keep-all}
+button{font-family:inherit;cursor:pointer;color:inherit}
+input,select,textarea{font-family:inherit;font-size:16px;color:var(--ink)}
+button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,a:focus-visible{outline:3px solid var(--lime);outline-offset:2px}
+.num{font-variant-numeric:tabular-nums}
+
+a.btn{text-decoration:none;display:inline-block;color:var(--ink)}
+.btn{border:1px solid var(--line);background:var(--paper);padding:11px 18px;border-radius:10px;font-size:15px;font-weight:600;line-height:1.2}
+.btn:hover{background:var(--soft)}
+.btn.primary,a.btn.primary{background:var(--ink);border-color:var(--ink);color:#fff}
+.btn.primary:hover{background:#2a2e27}
+.btn.lime{background:var(--lime);border-color:var(--lime);color:var(--ink)}
+.btn.danger{color:var(--fail)}
+.btn:disabled{opacity:.4;cursor:default}
+
+.notice{max-width:560px;margin:15vh auto;padding:0 20px;line-height:1.7}
+.notice h1{font-size:24px;margin:0 0 10px}
+.notice p{color:var(--sub);margin:0}
+
+@media (prefers-reduced-motion:reduce){*{animation-duration:.01ms!important;transition-duration:.01ms!important}}

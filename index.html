@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#FFFFFF">
+<title>텔레파시 게임</title>
+<link rel="stylesheet" href="base.css">
+<style>
+/* 참가자 휴대폰 화면: 한 화면에 한 가지 일만 */
+body{background:var(--paper)}
+.wrap{min-height:100%;display:flex;flex-direction:column;padding:calc(20px + env(safe-area-inset-top)) 20px calc(24px + env(safe-area-inset-bottom));max-width:520px;margin:0 auto;gap:20px}
+.top{display:flex;justify-content:space-between;align-items:center;font-size:14px;color:var(--sub)}
+.top b{color:var(--ink)}
+h1{margin:0;font-size:28px;font-weight:800;letter-spacing:-0.02em;line-height:1.3}
+.lead{margin:0;color:var(--sub);font-size:16px;line-height:1.6}
+label.f{font-size:14px;font-weight:700;display:block;margin-bottom:8px}
+.name{width:100%;padding:14px;border:1px solid var(--line);border-radius:12px;font-size:17px}
+.teams{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.team{border:1.5px solid var(--line);background:var(--paper);border-radius:12px;padding:14px 6px;display:flex;flex-direction:column;align-items:center;gap:4px}
+.team b{font-size:17px}
+.team span{font-size:13px;color:var(--sub)}
+.team[aria-pressed="true"]{border-color:var(--ink);background:var(--ink);color:#fff}
+.team[aria-pressed="true"] span{color:#cfd3ca}
+.err{color:var(--fail);font-size:14px;min-height:1.2em;margin:0}
+.cta{width:100%;padding:17px;font-size:18px;border-radius:14px;margin-top:auto}
+
+.center{flex:1;display:flex;flex-direction:column;justify-content:center;gap:14px}
+.big{font-size:44px;font-weight:900;letter-spacing:-0.03em;line-height:1.15}
+.dot{display:inline-block;width:10px;height:10px;border-radius:50%;background:var(--lime);margin-right:8px;animation:blink 1.4s infinite}
+@keyframes blink{50%{opacity:.25}}
+.link{background:none;border:0;padding:0;color:var(--sub);text-decoration:underline;font-size:15px;align-self:flex-start}
+
+.qhead{display:flex;justify-content:space-between;align-items:baseline;font-size:15px;color:var(--sub)}
+.qhead b{color:var(--lime-deep);font-size:17px}
+.qtext{margin:0;font-size:26px;font-weight:800;line-height:1.35;letter-spacing:-0.02em}
+.bar{height:8px;background:var(--line);border-radius:4px;overflow:hidden}
+.bar i{display:block;height:100%;background:var(--lime);width:100%}
+.hurry .bar i{background:var(--fail)}
+.opts{display:flex;flex-direction:column;gap:12px;flex:1}
+.opt{flex:1;min-height:88px;border:0;border-radius:18px;padding:18px 20px;display:flex;align-items:center;gap:16px;text-align:left;font-size:22px;font-weight:800;transition:transform .12s,opacity .2s}
+.opt:active{transform:scale(.97)}
+.opt .k{width:44px;height:44px;border-radius:50%;display:grid;place-items:center;font-size:20px;flex:none;background:rgba(255,255,255,.35)}
+.o0{background:var(--opt-a);color:var(--ink)}
+.o1{background:var(--opt-b);color:#fff}
+.o1 .k{background:rgba(255,255,255,.16)}
+.o2{background:var(--opt-c);color:var(--ink)}
+.opts.picked .opt{opacity:.28}
+.opts.picked .opt.sel{opacity:1;box-shadow:0 0 0 4px var(--paper),0 0 0 7px var(--ink)}
+.tip{font-size:14px;color:var(--sub);text-align:center;margin:0}
+.lead3{font-size:96px;font-weight:900;color:var(--lime-deep);text-align:center;line-height:1}
+
+.res{border-radius:22px;padding:28px 22px;display:flex;flex-direction:column;gap:10px}
+.res.ok{background:var(--lime)}
+.res.no{background:var(--soft)}
+.res .big{font-size:40px}
+.res .pts{font-size:30px;font-weight:900}
+.split{display:flex;flex-direction:column;gap:10px;margin-top:6px}
+.srow{display:grid;grid-template-columns:28px 1fr 44px;align-items:center;gap:10px;font-size:15px}
+.srow .t{height:12px;border-radius:6px;background:rgba(18,21,17,.12);overflow:hidden}
+.srow .t i{display:block;height:100%;background:var(--ink)}
+.srow.me b{text-decoration:underline;text-underline-offset:3px}
+.pop{animation:pop .5s cubic-bezier(.2,1.4,.4,1)}
+@keyframes pop{0%{transform:scale(.6);opacity:0}100%{transform:none;opacity:1}}
+
+.rank{display:flex;flex-direction:column;border-top:1px solid var(--line)}
+.rrow{display:grid;grid-template-columns:40px 1fr auto;padding:13px 4px;border-bottom:1px solid var(--line);font-size:16px;align-items:center}
+.rrow.me{background:var(--lime-soft);font-weight:800}
+.rrow .r{font-weight:800;color:var(--sub)}
+.offline{position:fixed;left:0;right:0;bottom:0;background:var(--fail);color:#fff;text-align:center;padding:8px;font-size:14px;display:none}
+</style>
+</head>
+<body>
+<div id="app" class="wrap"><div class="center"><p class="lead">불러오는 중이에요</p></div></div>
+<div class="offline" id="offline">연결이 끊겼어요. 다시 연결하는 중이에요</div>
+
+<script type="module">
+import { configured, auth, db, ref, onValue, set, onDisconnect, serverTimestamp, signInAnonymously, onAuthStateChanged, serverNow, LETTERS, LEVELS, esc, teamsOf, questionsOf, pointsFor, boardOf, notConfiguredHTML } from "./common.js";
+
+const app = document.getElementById("app");
+if (!configured) { app.innerHTML = notConfiguredHTML(); throw new Error("not configured"); }
+
+const S = { uid: null, cfg: null, game: null, players: {}, presence: {}, results: {}, vote: null, voteQid: null };
+let editingTeam = false, pickTeam = null, viewKey = "", voteUnsub = null, lastResultKey = "";
+
+onAuthStateChanged(auth, user => {
+  if (!user) { signInAnonymously(auth).catch(() => { app.innerHTML = `<div class="notice"><h1>입장할 수 없어요</h1><p>잠시 뒤 새로고침해 주세요.</p></div>`; }); return; }
+  S.uid = user.uid;
+  onValue(ref(db, "config"), s => { S.cfg = s.val(); render(); });
+  onValue(ref(db, "game"), s => { S.game = s.val() || { phase: "lobby", qi: -1 }; watchVote(); render(); });
+  onValue(ref(db, "players"), s => { S.players = s.val() || {}; syncPresence(); render(); });
+  onValue(ref(db, "presence"), s => { S.presence = s.val() || {}; render(); });
+  onValue(ref(db, "results"), s => { S.results = s.val() || {}; render(); });
+  onValue(ref(db, ".info/connected"), s => {
+    document.getElementById("offline").style.display = s.val() === false ? "block" : "none";
+    if (s.val()) syncPresence(true);
+  });
+});
+
+// 접속 표시: 내 팀이 있을 때만 presence 기록, 연결이 끊기면 자동 삭제
+let presTeam = null;
+function syncPresence(force) {
+  const me = S.players[S.uid];
+  const team = me ? me.team : null;
+  if (!force && team === presTeam) return;
+  presTeam = team;
+  const pref = ref(db, "presence/" + S.uid);
+  if (!team) { set(pref, null).catch(() => {}); return; }
+  onDisconnect(pref).remove().then(() => set(pref, { team, at: serverTimestamp() })).catch(() => {});
+}
+
+function watchVote() {
+  const qid = S.game && S.game.qid;
+  if (qid === S.voteQid) return;
+  S.voteQid = qid; S.vote = null;
+  if (voteUnsub) voteUnsub();
+  voteUnsub = qid ? onValue(ref(db, `votes/${qid}/${S.uid}`), s => { const v = s.val(); S.vote = v ? v.o : null; render(); }) : null;
+}
+
+const me = () => S.players[S.uid] || null;
+const teamName = id => (S.cfg?.teams?.[id]?.name) || "";
+const online = tid => Object.keys(S.presence).filter(u => S.players[u]?.team === tid).length;
+const curQ = () => questionsOf(S.cfg)[S.game?.qi] || null;
+
+function render() {
+  if (!S.cfg || !S.game) return;
+  const m = me();
+  const ph = S.game.phase;
+  const canChangeTeam = ["lobby", "leaderboard", "final"].includes(ph);
+  let key;
+  if (!m || !S.cfg.teams?.[m.team] || (editingTeam && canChangeTeam)) key = "join";
+  else if (ph === "question") key = `q:${S.game.qid}:${serverNow() < S.game.startAt ? "lead" : "open"}:${S.vote}`;
+  else key = `${ph}:${S.game.qid}:${S.vote}:${S.results[S.game.qid] ? 1 : 0}:${m.team}`;
+  if (key !== viewKey) {
+    viewKey = key;
+    const view = key === "join" ? viewJoin : ({ question: viewQuestion, closed: viewClosed, reveal: viewReveal, leaderboard: viewBoard, final: viewBoard })[ph] || viewLobby;
+    view();
+  } else refresh();
+}
+
+// 화면을 다시 그리지 않고 숫자만 바꾸기
+function refresh() {
+  app.querySelectorAll("[data-online]").forEach(el => { el.textContent = online(el.dataset.online) + "명"; });
+  const tot = app.querySelector("[data-total]");
+  if (tot) tot.textContent = Object.keys(S.presence).length;
+}
+
+function viewJoin() {
+  const m = me();
+  const teams = teamsOf(S.cfg);
+  if (pickTeam === null && m) pickTeam = m.team;
+  app.innerHTML = `
+    <div class="top"><span>${esc(S.cfg.title || "텔레파시 게임")}</span><span>지금 <b data-total>${Object.keys(S.presence).length}</b>명 참여 중</span></div>
+    <h1>우리 팀을<br>골라 주세요</h1>
+    <div><label class="f" for="nm">닉네임</label><input class="name" id="nm" maxlength="12" placeholder="예) 앨리" value="${esc(m ? m.name : (localStorage.getItem("tp_name") || ""))}"></div>
+    <div><span class="f" style="font-size:14px;font-weight:700;display:block;margin-bottom:8px">팀</span>
+    <div class="teams">${teams.map(t => `<button type="button" class="team" data-team="${esc(t.id)}" aria-pressed="${t.id === pickTeam}"><b>${esc(t.name)}</b><span data-online="${esc(t.id)}">${online(t.id)}명</span></button>`).join("")}</div></div>
+    <p class="err" id="err" role="alert"></p>
+    <button class="btn primary cta" id="go" type="button">입장하기</button>`;
+  app.querySelectorAll(".team").forEach(b => b.onclick = () => {
+    pickTeam = b.dataset.team;
+    app.querySelectorAll(".team").forEach(x => x.setAttribute("aria-pressed", x === b));
+  });
+  app.querySelector("#go").onclick = async () => {
+    const name = app.querySelector("#nm").value.trim();
+    const err = app.querySelector("#err");
+    if (!name) { err.textContent = "닉네임을 써 주세요."; return; }
+    if (!pickTeam) { err.textContent = "팀을 골라 주세요."; return; }
+    try { localStorage.setItem("tp_name", name); } catch (e) {}
+    try {
+      await set(ref(db, "players/" + S.uid), { name, team: pickTeam, joinedAt: serverTimestamp() });
+      editingTeam = false; viewKey = ""; render();
+    } catch (e) { err.textContent = "입장하지 못했어요. 잠시 뒤 다시 눌러 주세요."; }
+  };
+}
+
+function viewLobby() {
+  const m = me();
+  app.innerHTML = `
+    <div class="top"><span>${esc(S.cfg.title || "텔레파시 게임")}</span><span>지금 <b data-total>${Object.keys(S.presence).length}</b>명</span></div>
+    <div class="center">
+      <p class="lead"><span class="dot"></span>${esc(m.name)}님 입장 완료</p>
+      <div class="big pop">${esc(teamName(m.team))}</div>
+      <p class="lead">우리 팀 <b data-online="${esc(m.team)}">${online(m.team)}명</b> 접속 중이에요.<br>진행자가 시작하면 여기에 문제가 나와요.</p>
+      <p class="lead">팀원과 눈빛으로만 통해 보세요. 같은 답을 많이 고를수록 점수를 받아요.</p>
+    </div>
+    <button class="link" id="chg" type="button">팀 바꾸기</button>`;
+  app.querySelector("#chg").onclick = () => { editingTeam = true; pickTeam = me().team; viewKey = ""; render(); };
+}
+
+function viewQuestion() {
+  const q = curQ(); if (!q) return viewLobby();
+  const lead = serverNow() < S.game.startAt;
+  const head = `<div class="qhead"><span><b>Q${S.game.qi + 1}</b> / ${questionsOf(S.cfg).length}</span><span>${LEVELS[q.level] || ""} ${pointsFor(S.cfg, q)}점</span></div>`;
+  if (lead) {
+    app.innerHTML = `${head}<p class="qtext">${esc(q.text)}</p><div class="center"><div class="lead3 num" id="lead3"></div><p class="tip">곧 선택지가 열려요</p></div>`;
+    return;
+  }
+  const picked = S.vote !== null && S.vote !== undefined;
+  app.innerHTML = `${head}
+    <div class="bar"><i id="tbar"></i></div>
+    <p class="qtext">${esc(q.text)}</p>
+    <div class="opts${picked ? " picked" : ""}">${q.options.map((o, i) => `<button type="button" class="opt o${i}${S.vote === i ? " sel" : ""}" data-o="${i}"><span class="k">${LETTERS[i]}</span><span>${esc(o)}</span></button>`).join("")}</div>
+    <p class="tip" id="tip">${picked ? "선택 완료. 시간 안에는 바꿀 수 있어요" : "우리 팀이 고를 것 같은 답을 눌러요"}</p>`;
+  app.querySelectorAll(".opt").forEach(b => b.onclick = async () => {
+    const o = Number(b.dataset.o);
+    if (serverNow() > S.game.endsAt) return;
+    S.vote = o; viewKey = ""; render();
+    try { navigator.vibrate && navigator.vibrate(30); } catch (e) {}
+    try { await set(ref(db, `votes/${S.game.qid}/${S.uid}`), { o, t: me().team }); }
+    catch (e) { const tip = app.querySelector("#tip"); if (tip) tip.textContent = "투표가 마감됐어요."; }
+  });
+}
+
+function myChoiceText() {
+  const q = curQ();
+  if (!q) return "";
+  return S.vote === null || S.vote === undefined ? "선택하지 못했어요" : `내 선택 ${LETTERS[S.vote]} ${esc(q.options[S.vote])}`;
+}
+
+function viewClosed() {
+  app.innerHTML = `<div class="center">
+    <div class="big pop">투표 마감</div>
+    <p class="lead">${myChoiceText()}</p>
+    <p class="lead"><span class="dot"></span>우리 팀은 통했을까요? 결과를 기다려 주세요.</p></div>`;
+}
+
+function viewReveal() {
+  const r = S.results[S.game.qid];
+  if (!r) return viewClosed();
+  const m = me(), tr = r.teams?.[m.team];
+  if (!tr) return viewClosed();
+  const opts = Array.isArray(r.options) ? r.options : Object.values(r.options || {});
+  const counts = Array.isArray(tr.counts) ? tr.counts : Object.values(tr.counts || {});
+  const max = Math.max(1, ...counts);
+  app.innerHTML = `
+    <div class="top"><span><b>Q${S.game.qi + 1}</b> 결과</span><span>${esc(teamName(m.team))}</span></div>
+    <div class="res ${tr.success ? "ok" : "no"} pop">
+      <div class="big">${tr.success ? (tr.all ? "전원 일치!" : "텔레파시 성공!") : "아쉽게 실패"}</div>
+      <div class="pts num">${tr.success ? "+" + tr.points + "점" : "0점"}</div>
+      <p class="lead" style="color:var(--ink)">${tr.members}명 중 같은 답 최다 ${tr.top}명, 기준 ${tr.required}명</p>
+      <div class="split">${opts.map((o, i) => `<div class="srow${S.vote === i ? " me" : ""}"><b>${LETTERS[i]}</b><div><div style="font-size:14px;margin-bottom:4px">${esc(o)}</div><div class="t"><i style="width:${counts[i] / max * 100}%"></i></div></div><span class="num">${counts[i]}명</span></div>`).join("")}</div>
+    </div>
+    <p class="lead">${myChoiceText()}</p>`;
+  const rk = S.game.qid + ":" + m.team;
+  if (rk !== lastResultKey) { lastResultKey = rk; try { navigator.vibrate && navigator.vibrate(tr.success ? [60, 40, 60, 40, 120] : 200); } catch (e) {} }
+}
+
+function viewBoard() {
+  const m = me();
+  const rows = boardOf(S.cfg, S.results);
+  const mine = rows.find(r => r.id === m.team);
+  const fin = S.game.phase === "final";
+  app.innerHTML = `
+    <div class="top"><span>${fin ? "최종 결과" : "현재 순위"}</span><span>${esc(teamName(m.team))}</span></div>
+    <div><p class="lead">${fin ? "우리 팀 최종" : "우리 팀은 지금"}</p><div class="big pop">${mine ? mine.rank + "위" : "-"}<span style="font-size:24px;color:var(--sub);margin-left:10px" class="num">${mine ? mine.score : 0}점</span></div></div>
+    <div class="rank">${rows.map(r => `<div class="rrow${r.id === m.team ? " me" : ""}"><span class="r">${r.rank}</span><span>${esc(r.name)}</span><span class="num">${r.score}점</span></div>`).join("")}</div>
+    ${fin ? `<p class="lead">함께해 줘서 고마워요!</p>` : ""}
+    <button class="link" id="chg" type="button">팀 바꾸기</button>`;
+  app.querySelector("#chg").onclick = () => { editingTeam = true; pickTeam = me().team; viewKey = ""; render(); };
+}
+
+// 타이머, 준비 카운트다운 (매 프레임)
+function frame() {
+  if (S.game && S.game.phase === "question") {
+    const now = serverNow();
+    const l3 = document.getElementById("lead3");
+    if (l3) l3.textContent = Math.max(1, Math.ceil((S.game.startAt - now) / 1000));
+    const bar = document.getElementById("tbar");
+    if (bar) {
+      const total = S.game.endsAt - S.game.startAt;
+      const left = Math.max(0, S.game.endsAt - now);
+      bar.style.width = (left / total * 100) + "%";
+      app.classList.toggle("hurry", left < 5000);
+      const tip = document.getElementById("tip");
+      if (tip && left > 0 && S.vote !== null && S.vote !== undefined) tip.textContent = `선택 완료. ${Math.ceil(left / 1000)}초 안에는 바꿀 수 있어요`;
+    }
+    render();
+  } else app.classList.remove("hurry");
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>
