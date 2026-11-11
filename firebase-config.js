@@ -1,9 +1,10 @@
-// Firebase 콘솔 > 프로젝트 설정 > 내 앱(웹)에서 복사한 값을 붙여 넣으세요.
-// databaseURL은 Realtime Database 화면 맨 위에 있는 주소예요.
+// Firebase 프로젝트 telepathy-mingle 연결 값 (웹 앱 설정은 원래 공개되는 값이에요. 보호는 보안 규칙이 해요)
 export const firebaseConfig = {
-  apiKey: "여기에_apiKey",
-  authDomain: "프로젝트ID.firebaseapp.com",
-  databaseURL: "https://프로젝트ID-default-rtdb.asia-southeast1.firebasedatabase.app",
-  projectId: "프로젝트ID",
-  appId: "여기에_appId"
+  apiKey: "AIzaSyC31AnrOrxZxRfOkVuUbJWcZqQT4QuMeGc",
+  authDomain: "telepathy-mingle.firebaseapp.com",
+  databaseURL: "https://telepathy-mingle-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "telepathy-mingle",
+  storageBucket: "telepathy-mingle.firebasestorage.app",
+  messagingSenderId: "400632636118",
+  appId: "1:400632636118:web:68eeab40be57c78c4cdf77"
 };
