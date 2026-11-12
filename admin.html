@@ -267,7 +267,7 @@ function renderSet(main) {
   main.innerHTML = `<div class="sec" style="gap:22px">
     <div><label class="s" for="sTitle">게임 이름</label><input class="t" id="sTitle" maxlength="30" value="${esc(d.title)}" style="max-width:420px"></div>
     <div><h2>성공 기준</h2><p class="sub">2지선다에서 7명 팀은 한쪽이 늘 4명 이상이라, 인원 수 4명이면 거의 항상 성공해요. 5명 이상이나 비율 방식을 추천해요.</p></div>
-    <div class="radio"><label><input type="radio" name="mode" value="count" ${d.mode !== "ratio" ? "checked" : ""}> 인원 수로 정하기</label><label><input type="radio" name="mode" value="ratio" ${d.mode === "ratio" ? "checked" : ""}> 팀 접속 인원 대비 비율로 정하기</label></div>
+    <div class="radio"><label><input type="radio" name="mode" value="count" ${d.mode !== "ratio" ? "checked" : ""}> 인원 수로 정하기</label><label><input type="radio" name="mode" value="ratio" ${d.mode === "ratio" ? "checked" : ""}> 문제 시작 인원 대비 비율로 정하기(반올림)</label></div>
     <div class="form">
       <div><label class="s" for="sTh">같은 답 최소 인원</label><input class="t" id="sTh" type="number" min="1" max="20" value="${d.threshold}"></div>
       <div><label class="s" for="sRa">같은 답 최소 비율(%)</label><input class="t" id="sRa" type="number" min="1" max="100" value="${d.ratio}"></div>
