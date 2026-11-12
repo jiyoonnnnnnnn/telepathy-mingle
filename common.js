@@ -54,19 +54,21 @@ export const pointsFor = (cfg, q) => Number(cfg?.settings?.points?.[q?.level] ??
 
 export function requiredFor(cfg, members) {
   const s = cfg.settings || {};
-  if (s.mode === "ratio") return Math.max(1, Math.ceil(members * Number(s.ratio || 60) / 100));
+  // 비율 방식: 반올림 (정수 계산으로 소수 오차 방지, 예: 5명 x 70% = 3.5 → 4명)
+  if (s.mode === "ratio") return Math.max(1, Math.floor((members * Number(s.ratio || 60) + 50) / 100));
   return Math.max(1, Number(s.threshold || 4));
 }
 
 // 성공 기준을 사람이 읽는 문장으로
 export function ruleText(cfg) {
   const s = cfg.settings || {};
-  const base = s.mode === "ratio" ? `팀 접속 인원의 ${s.ratio}% 이상` : `${s.threshold}명 이상`;
+  const base = s.mode === "ratio" ? `문제 시작 때 팀 인원의 ${s.ratio}%(반올림) 이상` : `${s.threshold}명 이상`;
   return `같은 답을 고른 사람이 ${base}이면 성공` + (Number(s.bonus) > 0 ? `, 전원 일치면 보너스 ${s.bonus}점` : "");
 }
 
 // 한 문제의 팀별 결과 계산 (순수 함수)
-export function computeResult(cfg, q, votes, players, presence) {
+// base: 문제 시작 순간의 팀별 접속 인원 { teamId: 숫자 } (없으면 결과 공개 순간 인원으로 계산)
+export function computeResult(cfg, q, votes, players, presence, base) {
   const n = q.options.length;
   const teams = {};
   for (const t of teamsOf(cfg)) {
@@ -76,8 +78,8 @@ export function computeResult(cfg, q, votes, players, presence) {
       if (v && v.t === t.id && v.o >= 0 && v.o < n) { counts[v.o]++; voters.add(uid); }
     }
     const online = new Set(Object.keys(presence || {}).filter(uid => players?.[uid]?.team === t.id));
-    const members = new Set([...online, ...voters]).size;
     const voted = voters.size;
+    const members = base && base[t.id] != null ? Math.max(Number(base[t.id]), voted) : new Set([...online, ...voters]).size;
     const top = Math.max(0, ...counts);
     const required = requiredFor(cfg, members);
     const success = voted > 0 && top >= required;
@@ -114,10 +116,14 @@ export function makeActions(getCtx) {
   async function start(qi) {
     const q = qs()[qi];
     if (!q) return;
+    // 문제 시작 순간의 팀별 접속 인원을 기록 (비율 기준 계산용)
+    const [pl, pr] = await Promise.all([get(ref(db, "players")), get(ref(db, "presence"))]);
+    const players = pl.val() || {}, base = {};
+    for (const uid of Object.keys(pr.val() || {})) { const tm = players[uid]?.team; if (tm) base[tm] = (base[tm] || 0) + 1; }
     const t = serverNow();
     await remove(ref(db, "votes/" + q.id));
     await remove(ref(db, "results/" + q.id));
-    await set(ref(db, "game"), { phase: "question", qi, qid: q.id, startAt: t + LEAD_MS, endsAt: t + LEAD_MS + Number(q.time || 10) * 1000, rev: (g().rev || 0) + 1 });
+    await set(ref(db, "game"), { phase: "question", qi, qid: q.id, startAt: t + LEAD_MS, endsAt: t + LEAD_MS + Number(q.time || 10) * 1000, base, rev: (g().rev || 0) + 1 });
   }
   async function close() {
     const game = g();
@@ -130,7 +136,7 @@ export function makeActions(getCtx) {
     const q = qs()[game.qi];
     if (!q) return;
     const [v, p, pr] = await Promise.all([get(ref(db, "votes/" + q.id)), get(ref(db, "players")), get(ref(db, "presence"))]);
-    const result = computeResult(getCtx().cfg, q, v.val(), p.val(), pr.val());
+    const result = computeResult(getCtx().cfg, q, v.val(), p.val(), pr.val(), game.base);
     await set(ref(db, "results/" + q.id), result);
     await update(ref(db, "game"), { phase: "reveal", rev: (game.rev || 0) + 1 });
   }
