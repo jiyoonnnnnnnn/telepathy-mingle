@@ -55,14 +55,20 @@ export const pointsFor = (cfg, q) => Number(cfg?.settings?.points?.[q?.level] ??
 export function requiredFor(cfg, members) {
   const s = cfg.settings || {};
   // 비율 방식: 반올림 (정수 계산으로 소수 오차 방지, 예: 5명 x 70% = 3.5 → 4명)
-  if (s.mode === "ratio") return Math.max(1, Math.floor((members * Number(s.ratio || 60) + 50) / 100));
+  // 단, 인원이 적은 조(기본 4명 이하)는 전원 일치해야 성공
+  if (s.mode === "ratio") {
+    const full = Number(s.fullUpTo ?? 4);
+    if (members <= full) return Math.max(1, members);
+    return Math.max(1, Math.floor((members * Number(s.ratio || 60) + 50) / 100));
+  }
   return Math.max(1, Number(s.threshold || 4));
 }
 
 // 성공 기준을 사람이 읽는 문장으로
 export function ruleText(cfg) {
   const s = cfg.settings || {};
-  const base = s.mode === "ratio" ? `문제 시작 때 팀 인원의 ${s.ratio}%(반올림) 이상` : `${s.threshold}명 이상`;
+  const full = Number(s.fullUpTo ?? 4);
+  const base = s.mode === "ratio" ? `문제 시작 때 팀 인원의 ${s.ratio}%(반올림) 이상` + (full > 0 ? `(${full}명 이하 조는 전원)` : "") : `${s.threshold}명 이상`;
   return `같은 답을 고른 사람이 ${base}이면 성공` + (Number(s.bonus) > 0 ? `, 전원 일치면 보너스 ${s.bonus}점` : "");
 }
 
