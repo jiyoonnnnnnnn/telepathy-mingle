@@ -198,7 +198,7 @@ function buildLive(main) {
     <div><h2>팀별 현황</h2><p class="sub">투표 중에는 조별 실시간 선택 수가 보여요. 진행 화면에는 보이지 않아요.</p></div>
     <div class="tbl"><table><thead id="lvHead"></thead><tbody id="lvTeams"></tbody></table></div>
     <details><summary id="lvPSum">참가자</summary><p class="sub">회색은 지금 접속이 끊긴 사람이에요.</p>
-      <div class="tbl"><table><thead><tr><th>닉네임</th><th>팀</th><th>상태</th><th></th></tr></thead><tbody id="lvPlayers"></tbody></table></div></details>
+      <div class="tbl"><table><thead><tr><th>이름</th><th>팀</th><th>상태</th><th></th></tr></thead><tbody id="lvPlayers"></tbody></table></div></details>
     <div class="danger">
       <button class="btn danger" id="aReset" type="button">게임 초기화</button>
       <button class="btn danger" id="aClear" type="button">참가자 모두 내보내기</button>
@@ -235,7 +235,7 @@ function cue() {
       out.say = "잠깐 쉬었다가 다시 시작할게요!";
     } else {
       out.todo = "참가자가 QR로 들어오게 안내해요. 거의 다 들어오면 큰 버튼으로 첫 문제를 시작해요.";
-      out.say = "화면의 QR을 찍고 별명이랑 우리 조를 골라 주세요. 한 화면에서만 열어 주세요!";
+      out.say = "화면의 QR을 찍고 이름이랑 우리 조를 골라 주세요. 한 화면에서만 열어 주세요!";
     }
     if (!online.length) out.alert = "아직 들어온 사람이 없어요.";
     else if (empty.length) out.alert = `아직 아무도 없는 조: ${empty.join(", ")}`;
