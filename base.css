@@ -1,17 +1,24 @@
 /* 텔레파시 게임 공용 스타일. 올리브영 라임 그린 + 먹색, 흰 바탕의 미니멀 편집 디자인 */
 :root{
-  --lime:#82D622;
-  --lime-deep:#4C8A0A;
-  --lime-soft:#EEF8E0;
-  --ink:#121511;
-  --sub:#646A5E;
-  --line:#E2E6DB;
+  /* 올리브영 공식 색상: Olive Green, Light Green, Medium Green, Deep Green, Coral Orange */
+  --lime:#82DC28;        /* Olive Green */
+  --light:#D2F096;       /* Light Green */
+  --green:#00B464;       /* Medium Green */
+  --deep:#2C4F4F;        /* Deep Green */
+  --coral:#FF7878;       /* Coral Orange */
+  --lime-deep:#2C4F4F;
+  --lime-soft:#EEF8DA;
+  --ink:#172524;
+  --sub:#5B6A66;
+  --line:#DCE4D7;
   --paper:#FFFFFF;
-  --soft:#F5F7F1;
-  --fail:#D8462C;
-  --opt-a:#82D622;
-  --opt-b:#121511;
-  --opt-c:#FFC93C;
+  --soft:#F5F8F1;
+  --fail:#E8585C;
+  --opt-a:#82DC28;
+  --opt-b:#2C4F4F;
+  --opt-c:#FF7878;
+  --r:3px;
+  --r-l:6px;
   --font:"Pretendard Variable",Pretendard,-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Malgun Gothic","Noto Sans KR",sans-serif;
   color-scheme:light;
 }
@@ -24,11 +31,11 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 .num{font-variant-numeric:tabular-nums}
 
 a.btn{text-decoration:none;display:inline-block;color:var(--ink)}
-.btn{border:1px solid var(--line);background:var(--paper);padding:11px 18px;border-radius:10px;font-size:15px;font-weight:600;line-height:1.2}
+.btn{border:1px solid var(--line);background:var(--paper);padding:11px 18px;border-radius:var(--r);font-size:15px;font-weight:600;line-height:1.2}
 .btn:hover{background:var(--soft)}
-.btn.primary,a.btn.primary{background:var(--ink);border-color:var(--ink);color:#fff}
-.btn.primary:hover{background:#2a2e27}
-.btn.lime{background:var(--lime);border-color:var(--lime);color:var(--ink)}
+.btn.primary,a.btn.primary{background:var(--deep);border-color:var(--deep);color:#fff}
+.btn.primary:hover{background:#213d3d}
+.btn.lime{background:var(--lime);border-color:var(--lime);color:var(--deep)}
 .btn.danger{color:var(--fail)}
 .btn:disabled{opacity:.4;cursor:default}
 
