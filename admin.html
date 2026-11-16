@@ -44,13 +44,41 @@ label.s{font-size:13px;color:var(--sub);display:block;margin-bottom:4px;font-wei
 .save .msg{color:var(--sub);font-size:14px}
 .warn{color:var(--fail);font-size:14px}
 .radio{display:flex;gap:18px;flex-wrap:wrap;font-size:15px}
+/* 진행 콘솔 */
+.console{display:flex;flex-direction:column;gap:22px}
+.cgrid{display:grid;grid-template-columns:minmax(0,1.7fr) minmax(0,1fr);gap:24px;align-items:start}
+.now{border:1px solid var(--line);border-radius:16px;padding:20px 22px;display:flex;flex-direction:column;gap:12px}
+.nowtop{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap}
+.nowtop .prog{font-size:15px;font-weight:800;color:var(--lime-deep);font-variant-numeric:tabular-nums}
+.nowtop .phase{font-size:26px;font-weight:900}
+.nowtop .timer{margin-left:auto;font-size:34px;font-weight:900;font-variant-numeric:tabular-nums}
+.nowtop .timer.hurry{color:var(--fail)}
+.qnow{margin:0;font-size:19px;font-weight:700;line-height:1.4}
+.meter{display:flex;align-items:center;gap:12px;font-size:15px;color:var(--sub)}
+.meter .bar{flex:1;height:10px;background:var(--line);border-radius:5px;overflow:hidden}
+.meter .bar i{display:block;height:100%;width:0;background:var(--lime);transition:width .3s}
+.meter b{color:var(--ink);font-variant-numeric:tabular-nums}
+.guide{display:flex;flex-direction:column;gap:14px;padding:4px 2px}
+.lab{display:block;font-size:13px;font-weight:800;color:var(--sub);margin-bottom:4px}
+.guide p{margin:0;font-size:17px;line-height:1.55}
+.guide .say{background:var(--lime-soft);border-left:4px solid var(--lime);padding:10px 14px;border-radius:0 10px 10px 0;font-weight:600}
+.alertline{margin:0;font-size:15px;font-weight:700;color:var(--fail);min-height:1.2em}
+.alertline.good{color:var(--lime-deep)}
+.btn.huge{width:100%;padding:18px;font-size:20px;border-radius:14px}
+.keys{font-size:13px;color:var(--sub)}
+.info{display:flex;flex-direction:column;gap:16px;border-left:1px solid var(--line);padding-left:22px}
+.info p{margin:0;font-size:16px;line-height:1.5}
+.info .big{font-size:24px;font-weight:900;font-variant-numeric:tabular-nums}
+details summary{cursor:pointer;font-weight:700;font-size:17px;padding:6px 0}
+.danger{display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding-top:14px;border-top:1px solid var(--line)}
+@media (max-width:900px){.cgrid{grid-template-columns:1fr}.info{border-left:0;padding-left:0;border-top:1px solid var(--line);padding-top:16px}}
 @media (max-width:760px){.qgrid,.form{grid-template-columns:1fr}.qmeta{grid-template-columns:1fr 1fr}.qmeta .acts{grid-column:1/-1;justify-content:flex-start}}
 </style>
 </head>
 <body>
 <div id="root"></div>
 <script type="module">
-import { configured, auth, db, ref, onValue, set, update, signOut, onAuthStateChanged, serverNow, LETTERS, LEVELS, esc, uid8, teamsOf, questionsOf, pointsFor, boardOf, ruleText, defaultConfig, makeActions, autoClose, isAdmin, notConfiguredHTML, mountLogin, PHASE_NAME } from "./common.js";
+import { configured, auth, db, ref, onValue, set, update, signOut, onAuthStateChanged, serverNow, LETTERS, LEVELS, esc, uid8, teamsOf, questionsOf, pointsFor, boardOf, ruleText, requiredFor, remainingSeconds, defaultConfig, makeActions, autoClose, isAdmin, notConfiguredHTML, mountLogin, PHASE_NAME } from "./common.js";
 
 const root = document.getElementById("root");
 if (!configured) { root.innerHTML = notConfiguredHTML(); throw new Error("not configured"); }
@@ -108,6 +136,7 @@ function renderTab() {
   if (!S.cfg) return;
   const main = document.getElementById("main");
   if (!main) return;
+  if (tab !== "live") main.dataset.view = tab;
   if (tab === "live") return renderLive(main);
   if (tab === "teams") return renderTeams(main);
   if (tab === "qs") return renderQs(main);
@@ -125,57 +154,202 @@ function confirmBtn(el, label, fn) {
 }
 function alertMsg(m) { const el = document.getElementById("liveMsg"); if (el) el.textContent = m; }
 
-/* 진행 현황 */
+/* 진행 현황: 처음 진행하는 사람도 따라 할 수 있는 진행 콘솔 */
 function renderLive(main) {
-  const g = S.game || { phase: "lobby", qi: -1 };
-  const qs = questionsOf(S.cfg), q = qs[g.qi];
-  const online = Object.keys(S.presence).filter(u => S.players[u] && S.cfg.teams?.[S.players[u].team]);
-  const nOpt = q ? q.options.length : 2;
-  const r = q ? S.results[q.id] : null;
-  const live = {};
-  for (const t of teamsOf(S.cfg)) live[t.id] = new Array(nOpt).fill(0);
-  for (const v of Object.values(S.votes || {})) if (live[v.t] && v.o < nOpt) live[v.t][v.o]++;
-  const board = Object.fromEntries(boardOf(S.cfg, S.results).map(b => [b.id, b]));
+  if (main.dataset.view !== "live" || !document.getElementById("lvPhase")) buildLive(main);
+  updateLive();
+}
+
+function buildLive(main) {
+  main.dataset.view = "live";
   const joinUrl = new URL("./", location.href).href;
-  const focus = document.activeElement && document.activeElement.id;
-  main.innerHTML = `<div class="sec" style="gap:22px">
-    <div class="status"><b>${g.qi >= 0 && g.phase !== "lobby" ? `Q${g.qi + 1} ` : ""}${PHASE_NAME[g.phase] || ""}</b><span>${q ? esc(q.text) : `문제 ${qs.length}개 준비됨`}</span><span>접속 ${online.length}명</span></div>
-    <div class="row">
-      <button class="btn primary" id="aPrimary" type="button">${actions.primaryLabel()}</button>
-      <button class="btn" id="aTime" type="button" ${g.phase !== "question" ? "disabled" : ""}>시간 +5초</button>
-      <button class="btn" id="aRestart" type="button" ${g.qi < 0 ? "disabled" : ""}>이 문제 다시 하기</button>
-      <button class="btn" id="aLobby" type="button">대기 화면으로</button>
-      <select class="t" id="aJump" style="width:auto"><option value="">문제 골라서 시작</option>${qs.map((x, i) => `<option value="${i}">Q${i + 1} ${esc(x.text)}</option>`).join("")}</select>
+  main.innerHTML = `<div class="console">
+    <div class="cgrid">
+      <div style="display:flex;flex-direction:column;gap:18px">
+        <section class="now" aria-live="polite">
+          <div class="nowtop"><span class="prog" id="lvProg"></span><span class="phase" id="lvPhase"></span><span class="timer" id="lvTimer"></span></div>
+          <p class="qnow" id="lvQ"></p>
+          <div class="meter" id="lvMeter"><div class="bar"><i id="lvBar"></i></div><span id="lvAns"></span></div>
+        </section>
+        <section class="guide">
+          <div><span class="lab">지금 할 일</span><p id="lvTodo"></p></div>
+          <div><span class="lab">멘트 예시</span><p class="say" id="lvSay"></p></div>
+          <p class="alertline" id="lvAlert"></p>
+        </section>
+        <div style="display:flex;flex-direction:column;gap:10px">
+          <button class="btn primary huge" id="aPrimary" type="button"></button>
+          <div class="row">
+            <button class="btn" id="aBoard" type="button">순위 보기</button>
+            <button class="btn" id="aTime" type="button">시간 +5초</button>
+            <button class="btn" id="aRestart" type="button">이 문제 다시</button>
+            <button class="btn" id="aLobby" type="button">대기 화면으로</button>
+          </div>
+          <span class="keys">진행 화면 창에서는 스페이스바 = 큰 버튼, R = 순위 보기, F = 전체 화면</span>
+        </div>
+      </div>
+      <aside class="info">
+        <div><span class="lab">다음 문제</span><p id="lvNext"></p></div>
+        <div><span class="lab">남은 시간</span><p class="big" id="lvEta"></p><p class="sub" id="lvEta2" style="margin:0"></p></div>
+        <div><span class="lab">성공 기준</span><p id="lvRule"></p></div>
+        <div><span class="lab">문제 골라서 시작</span><select class="t" id="aJump"></select></div>
+        <div><span class="lab">참가 주소</span><p style="word-break:break-all;font-size:14px">${esc(joinUrl)}</p><button class="btn" id="cp" type="button" style="margin-top:6px">주소 복사</button></div>
+      </aside>
     </div>
-    <div class="row">
+    <div><h2>팀별 현황</h2><p class="sub">투표 중에는 조별 실시간 선택 수가 보여요. 진행 화면에는 보이지 않아요.</p></div>
+    <div class="tbl"><table><thead id="lvHead"></thead><tbody id="lvTeams"></tbody></table></div>
+    <details><summary id="lvPSum">참가자</summary><p class="sub">회색은 지금 접속이 끊긴 사람이에요.</p>
+      <div class="tbl"><table><thead><tr><th>닉네임</th><th>팀</th><th>상태</th><th></th></tr></thead><tbody id="lvPlayers"></tbody></table></div></details>
+    <div class="danger">
       <button class="btn danger" id="aReset" type="button">게임 초기화</button>
       <button class="btn danger" id="aClear" type="button">참가자 모두 내보내기</button>
       <span class="sub" id="liveMsg" style="margin:0">게임 초기화는 점수와 투표만 지우고, 팀과 문제는 남겨요.</span>
     </div>
-    <div class="url"><span>참가 주소</span><code>${esc(joinUrl)}</code><button class="btn" id="cp" type="button">복사</button></div>
-    <div><h2>팀별 현황</h2><p class="sub">${esc(ruleText(S.cfg))}. 투표 중에는 실시간 선택 수가 보여요(진행 화면에는 안 보여요).</p></div>
-    <div class="tbl"><table><thead><tr><th>팀</th><th>접속</th>${Array.from({ length: nOpt }, (_, i) => `<th>${LETTERS[i]}</th>`).join("")}<th>이번 문제</th><th>누적 점수</th><th>순위</th></tr></thead><tbody>
-    ${teamsOf(S.cfg).map(t => {
-      const tr = r?.teams?.[t.id];
-      const res = tr ? (tr.voted === 0 ? "미참여" : tr.success ? `<span class="ok">성공 +${tr.points}</span>` : `<span class="no">실패</span>`) : "";
-      return `<tr><td>${esc(t.name)}</td><td class="n">${online.filter(u => S.players[u].team === t.id).length}</td>${live[t.id].map(n => `<td class="n">${n}</td>`).join("")}<td>${res}</td><td class="n">${board[t.id]?.score ?? 0}</td><td class="n">${board[t.id]?.rank ?? ""}</td></tr>`;
-    }).join("")}</tbody></table></div>
-    <div><h2>참가자 ${Object.keys(S.players).length}명</h2><p class="sub">회색은 지금 접속이 끊긴 사람이에요.</p></div>
-    <div class="tbl"><table><thead><tr><th>닉네임</th><th>팀</th><th>상태</th><th></th></tr></thead><tbody>
-    ${Object.entries(S.players).sort((a, b) => (a[1].joinedAt || 0) - (b[1].joinedAt || 0)).map(([u, p]) => `<tr style="${S.presence[u] ? "" : "color:var(--sub)"}"><td>${esc(p.name)}</td><td>${esc(S.cfg.teams?.[p.team]?.name || "팀 없음")}</td><td>${S.presence[u] ? "접속 중" : "끊김"}</td><td style="text-align:right"><button class="x" data-kick="${esc(u)}" type="button">내보내기</button></td></tr>`).join("")}
-    </tbody></table></div></div>`;
+  </div>`;
   const run = fn => async () => { try { await fn(); } catch (e) { alertMsg("처리하지 못했어요: " + e.message); } };
   main.querySelector("#aPrimary").onclick = run(() => actions.primary());
+  main.querySelector("#aBoard").onclick = run(() => actions.leaderboard());
   main.querySelector("#aTime").onclick = run(() => actions.addTime());
-  main.querySelector("#aRestart").onclick = run(() => actions.restart());
   main.querySelector("#aLobby").onclick = run(() => actions.lobby());
-  main.querySelector("#aJump").onchange = e => { if (e.target.value !== "") actions.start(Number(e.target.value)).catch(x => alertMsg(x.message)); };
+  confirmBtn(main.querySelector("#aRestart"), "이 문제 다시", () => actions.restart());
   confirmBtn(main.querySelector("#aReset"), "게임 초기화", () => actions.resetGame());
   confirmBtn(main.querySelector("#aClear"), "참가자 모두 내보내기", () => actions.clearPlayers());
+  main.querySelector("#aJump").onchange = e => { const v = e.target.value; e.target.value = ""; if (v !== "") actions.start(Number(v)).catch(x => alertMsg(x.message)); };
   main.querySelector("#cp").onclick = () => navigator.clipboard.writeText(joinUrl).then(() => alertMsg("참가 주소를 복사했어요."), () => alertMsg("복사하지 못했어요. 주소를 직접 선택해 주세요."));
-  main.querySelectorAll("[data-kick]").forEach(b => b.onclick = run(() => actions.kick(b.dataset.kick)));
-  if (focus) { const el = document.getElementById(focus); if (el) el.focus(); }
+  main.querySelector("#lvPlayers").onclick = e => { const b = e.target.closest("[data-kick]"); if (b) run(() => actions.kick(b.dataset.kick))(); };
 }
+
+const onlineOf = () => Object.keys(S.presence).filter(u => S.players[u] && S.cfg.teams?.[S.players[u].team]);
+const fmtMin = sec => sec < 60 ? `${sec}초` : `약 ${Math.round(sec / 60)}분`;
+
+// 단계별 안내 문구와 멘트 (결과에 맞춰 자동으로 만들어요)
+function cue() {
+  const g = S.game || { phase: "lobby", qi: -1 };
+  const qs = questionsOf(S.cfg), q = qs[g.qi], online = onlineOf();
+  const last = actions.isLast();
+  const out = { todo: "", say: "", alert: "", good: false };
+  const now = serverNow();
+  if (g.phase === "lobby") {
+    const empty = teamsOf(S.cfg).filter(t => !online.some(u => S.players[u].team === t.id)).map(t => t.name);
+    if (g.qi >= 0) {
+      out.todo = `중간 대기 중이에요. 큰 버튼을 누르면 Q${g.qi + 2}부터 이어서 해요.`;
+      out.say = "잠깐 쉬었다가 다시 시작할게요!";
+    } else {
+      out.todo = "참가자가 QR로 들어오게 안내해요. 거의 다 들어오면 큰 버튼으로 첫 문제를 시작해요.";
+      out.say = "화면의 QR을 찍고 별명이랑 우리 조를 골라 주세요. 한 화면에서만 열어 주세요!";
+    }
+    if (!online.length) out.alert = "아직 들어온 사람이 없어요.";
+    else if (empty.length) out.alert = `아직 아무도 없는 조: ${empty.join(", ")}`;
+    else { out.alert = "모든 조에 참가자가 있어요. 시작해도 돼요."; out.good = true; }
+  } else if (g.phase === "question") {
+    if (now < g.startAt) {
+      out.todo = "문제를 소리 내어 읽어 주세요. 3초 뒤 선택지가 열려요.";
+      out.say = `"${q ? q.text : ""}" 팀원과 말하지 말고, 눈빛으로만 맞춰 보세요!`;
+    } else {
+      const ans = Object.keys(S.votes || {}).length, left = Math.ceil((g.endsAt - now) / 1000);
+      out.todo = "투표 중이에요. 시간이 끝나면 결과가 자동으로 나와요. 기다리기만 하면 돼요.";
+      out.say = "우리 조가 고를 것 같은 답을 눌러 주세요. 시간 안에는 바꿀 수 있어요!";
+      if (online.length && ans >= online.length) { out.alert = "모두 응답했어요. 큰 버튼을 눌러 바로 결과를 봐도 돼요."; out.good = true; }
+      else if (left <= 5) out.alert = "곧 마감돼요.";
+    }
+  } else if (g.phase === "closed") {
+    out.todo = "결과를 계산하는 중이에요. 잠깐만 기다려요.";
+    out.say = "두구두구, 과연 우리 조는 통했을까요?";
+    if (now > (g.endsAt || 0) + 3000) out.alert = "결과가 안 나오면 큰 버튼(결과 공개)을 눌러요.";
+  } else if (g.phase === "reveal") {
+    const r = S.results[g.qid];
+    if (r) {
+      const opts = Array.isArray(r.options) ? r.options : Object.values(r.options || {});
+      const teams = Object.values(r.teams || {});
+      const tot = opts.map((_, i) => teams.reduce((a, t) => a + (Number((t.counts || [])[i]) || 0), 0));
+      const sum = tot.reduce((a, b) => a + b, 0);
+      const played = teams.filter(t => t.voted > 0).length, ok = teams.filter(t => t.success).length;
+      const allNames = teamsOf(S.cfg).filter(t => r.teams?.[t.id]?.all).map(t => t.name);
+      if (sum) {
+        const ti = tot.indexOf(Math.max(...tot)), p = Math.round(tot[ti] / sum * 100);
+        out.say = ok ? `"${opts[ti]}"를 고른 사람이 ${p}%네요! ${played}팀 중 ${ok}팀이 통했어요.` : `"${opts[ti]}"가 ${p}%였는데, 이번엔 아무 조도 못 맞혔어요. 다음 문제에서 만회해요!`;
+        if (allNames.length) out.say += ` ${allNames.join(", ")}는 전원 일치!`;
+      } else out.say = "이번 문제는 아무도 투표하지 않았어요.";
+    }
+    if (last) out.todo = "마지막 문제예요. 결과를 짚고 큰 버튼으로 최종 결과를 보여 줘요.";
+    else if ((g.qi + 1) % 5 === 0) out.todo = "결과를 한마디 짚어 주세요. 5문제째라 '순위 보기'로 한 번 보여 주면 좋아요.";
+    else out.todo = "결과를 한마디 짚고 큰 버튼으로 다음 문제로 넘어가요. 순위는 필요할 때만 보여 줘요.";
+  } else if (g.phase === "leaderboard") {
+    const b = boardOf(S.cfg, S.results), tops = b.filter(x => x.rank === 1);
+    out.todo = last ? "순위를 짚고 큰 버튼으로 최종 결과를 보여 줘요." : "순위를 짚고 큰 버튼으로 다음 문제로 넘어가요.";
+    out.say = tops.length > 1 ? `지금 공동 1등은 ${tops.map(x => x.name).join(", ")}, ${tops[0].score}점이에요!` : `지금 1등은 ${tops[0]?.name}, ${tops[0]?.score}점이에요! 아직 역전할 수 있어요.`;
+  } else if (g.phase === "final") {
+    const b = boardOf(S.cfg, S.results), tops = b.filter(x => x.rank === 1);
+    out.todo = "시상하고 마무리해요. 행사가 끝나면 아래 '참가자 모두 내보내기'로 정리해요.";
+    out.say = `오늘의 텔레파시 1등은 ${tops.map(x => x.name).join(", ")}! 큰 박수 부탁드려요.`;
+  }
+  return out;
+}
+
+function updateLive() {
+  if (!document.getElementById("lvPhase")) return;
+  const g = S.game || { phase: "lobby", qi: -1 };
+  const qs = questionsOf(S.cfg), q = qs[g.qi], online = onlineOf();
+  const inQ = g.qi >= 0 && g.phase !== "lobby";
+  const $ = id => document.getElementById(id);
+  $("lvProg").textContent = inQ ? `Q${g.qi + 1} / ${qs.length}` : `문제 ${qs.length}개`;
+  $("lvPhase").textContent = PHASE_NAME[g.phase] || "";
+  $("lvQ").textContent = inQ && q ? q.text : `접속 ${online.length}명`;
+  const ans = Object.keys(S.votes || {}).length;
+  const showMeter = ["question", "closed"].includes(g.phase);
+  $("lvMeter").style.display = showMeter ? "" : "none";
+  if (showMeter) { $("lvAns").innerHTML = `응답 <b>${ans}</b> / ${online.length}명`; $("lvBar").style.width = (online.length ? Math.min(100, ans / online.length * 100) : 0) + "%"; }
+  const c = cue();
+  $("lvTodo").textContent = c.todo; $("lvSay").textContent = c.say;
+  $("lvAlert").textContent = c.alert; $("lvAlert").classList.toggle("good", c.good);
+  $("aPrimary").textContent = actions.primaryLabel();
+  $("aBoard").disabled = !actions.canBoard();
+  $("aTime").disabled = g.phase !== "question";
+  $("aRestart").disabled = !(g.qi >= 0 && ["question", "closed", "reveal"].includes(g.phase));
+  // 다음 문제
+  const ni = ["lobby"].includes(g.phase) && g.qi < 0 ? 0 : g.qi + 1, nq = qs[ni];
+  $("lvNext").innerHTML = nq ? `<b>Q${ni + 1}</b> ${esc(nq.text)}<br><span class="sub">${LEVELS[nq.level] || ""} ${pointsFor(S.cfg, nq)}점, ${nq.time}초, ${nq.options.length}지선다</span>` : "마지막 문제예요. 다음은 최종 결과예요.";
+  $("lvRule").textContent = ruleText(S.cfg);
+  const jump = $("aJump"), jh = `<option value="">문제를 고르면 바로 시작해요</option>` + qs.map((x, i) => `<option value="${i}">Q${i + 1} ${esc(x.text)}</option>`).join("");
+  if (jump.dataset.h !== jh && document.activeElement !== jump) { jump.innerHTML = jh; jump.dataset.h = jh; }
+  // 팀 표
+  const nOpt = q ? q.options.length : 2, r = q ? S.results[q.id] : null;
+  const live = {}; for (const t of teamsOf(S.cfg)) live[t.id] = new Array(nOpt).fill(0);
+  for (const v of Object.values(S.votes || {})) if (live[v.t] && v.o < nOpt) live[v.t][v.o]++;
+  const board = Object.fromEntries(boardOf(S.cfg, S.results).map(b => [b.id, b]));
+  $("lvHead").innerHTML = `<tr><th>팀</th><th>접속</th><th>필요 인원</th>${Array.from({ length: nOpt }, (_, i) => `<th>${LETTERS[i]}</th>`).join("")}<th>이번 문제</th><th>누적 점수</th><th>순위</th></tr>`;
+  $("lvTeams").innerHTML = teamsOf(S.cfg).map(t => {
+    const on = online.filter(u => S.players[u].team === t.id).length;
+    const baseN = g.base && g.base[t.id] != null && inQ ? g.base[t.id] : on;
+    const tr = r?.teams?.[t.id];
+    const res = tr ? (tr.voted === 0 ? "미참여" : tr.success ? `<span class="ok">성공 +${tr.points}</span>` : `<span class="no">실패</span>`) : "";
+    return `<tr${on ? "" : ' style="color:var(--sub)"'}><td>${esc(t.name)}</td><td class="n">${on}</td><td class="n">${tr ? tr.required : requiredFor(S.cfg, baseN)}명</td>${live[t.id].map(n => `<td class="n">${n}</td>`).join("")}<td>${res}</td><td class="n">${board[t.id]?.score ?? 0}</td><td class="n">${board[t.id]?.rank ?? ""}</td></tr>`;
+  }).join("");
+  const ps = Object.entries(S.players).sort((a, b) => (a[1].joinedAt || 0) - (b[1].joinedAt || 0));
+  $("lvPSum").textContent = `참가자 ${ps.length}명 (접속 ${online.length}명)`;
+  $("lvPlayers").innerHTML = ps.map(([u, p]) => `<tr style="${S.presence[u] ? "" : "color:var(--sub)"}"><td>${esc(p.name)}</td><td>${esc(S.cfg.teams?.[p.team]?.name || "팀 없음")}</td><td>${S.presence[u] ? "접속 중" : "끊김"}</td><td style="text-align:right"><button class="x" data-kick="${esc(u)}" type="button">내보내기</button></td></tr>`).join("");
+  tickLive();
+}
+
+// 타이머, 남은 시간은 0.25초마다
+function tickLive() {
+  const $ = id => document.getElementById(id);
+  if (!$("lvTimer")) return;
+  const g = S.game || {}, now = serverNow();
+  let t = "";
+  if (g.phase === "question") t = now < g.startAt ? `준비 ${Math.ceil((g.startAt - now) / 1000)}` : `${Math.max(0, Math.ceil((g.endsAt - now) / 1000))}초`;
+  $("lvTimer").textContent = t;
+  $("lvTimer").classList.toggle("hurry", g.phase === "question" && now >= g.startAt && g.endsAt - now <= 5000);
+  const sec = remainingSeconds(S.cfg, g);
+  const qs = questionsOf(S.cfg), from = ["question", "closed"].includes(g.phase) ? g.qi : (g.qi ?? -1) + 1;
+  const leftQ = Math.max(0, qs.length - Math.max(0, from));
+  $("lvEta").textContent = g.phase === "final" ? "끝" : fmtMin(sec);
+  const end = new Date(Date.now() + sec * 1000);
+  $("lvEta2").textContent = g.phase === "final" ? "모든 문제를 마쳤어요." : `남은 문제 ${leftQ}개, ${String(end.getHours()).padStart(2, "0")}:${String(end.getMinutes()).padStart(2, "0")}쯤 끝나요 (문제당 진행 20초 기준)`;
+  if (g.phase === "question" || g.phase === "closed") {
+    const c = cue(); $("lvTodo").textContent = c.todo; $("lvAlert").textContent = c.alert; $("lvAlert").classList.toggle("good", c.good);
+  }
+}
+setInterval(() => { if (tab === "live") tickLive(); }, 250);
 
 /* 팀 */
 function renderTeams(main) {
