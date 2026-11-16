@@ -445,6 +445,7 @@ function renderSet(main) {
     <div class="form">
       <div><label class="s" for="sTh">같은 답 최소 인원</label><input class="t" id="sTh" type="number" min="1" max="20" value="${d.threshold}"></div>
       <div><label class="s" for="sRa">같은 답 최소 비율(%)</label><input class="t" id="sRa" type="number" min="1" max="100" value="${d.ratio}"></div>
+      <div><label class="s" for="sFu">전원 일치가 필요한 조 인원(이하)</label><input class="t" id="sFu" type="number" min="0" max="10" value="${d.fullUpTo ?? 4}"></div>
       <div><label class="s" for="sBo">전원 일치 보너스(점)</label><input class="t" id="sBo" type="number" min="0" step="10" value="${d.bonus}"></div>
     </div>
     <div><h2>난이도별 점수</h2></div>
@@ -455,7 +456,7 @@ function renderSet(main) {
     const v = id => Number(main.querySelector(id).value);
     const settings = {
       mode: main.querySelector('input[name="mode"]:checked').value,
-      threshold: Math.max(1, v("#sTh") || 4), ratio: Math.min(100, Math.max(1, v("#sRa") || 60)), bonus: Math.max(0, v("#sBo") || 0),
+      threshold: Math.max(1, v("#sTh") || 4), ratio: Math.min(100, Math.max(1, v("#sRa") || 60)), bonus: Math.max(0, v("#sBo") || 0), fullUpTo: Math.max(0, Math.min(10, v("#sFu"))),
       points: { easy: Math.max(0, v("#p_easy")), normal: Math.max(0, v("#p_normal")), hard: Math.max(0, v("#p_hard")) }
     };
     try {
