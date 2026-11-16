@@ -1,14 +1,14 @@
 // 텔레파시 게임 공용 모듈: Firebase 연결, 점수 계산, 진행 액션
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getAuth, onAuthStateChanged, signInAnonymously, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-import { getDatabase, ref, onValue, set, update, remove, get, onDisconnect, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+import { getDatabase, ref, onValue, set, update, remove, get, onDisconnect, serverTimestamp, runTransaction } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 import { firebaseConfig } from "./firebase-config.js";
 
 export const configured = !!firebaseConfig.apiKey && !firebaseConfig.apiKey.startsWith("여기");
 export const app = configured ? initializeApp(firebaseConfig) : null;
 export const auth = configured ? getAuth(app) : null;
 export const db = configured ? getDatabase(app) : null;
-export { ref, onValue, set, update, remove, get, onDisconnect, serverTimestamp, onAuthStateChanged, signInAnonymously, signInWithEmailAndPassword, signOut };
+export { ref, onValue, set, update, remove, get, onDisconnect, serverTimestamp, runTransaction, onAuthStateChanged, signInAnonymously, signInWithEmailAndPassword, signOut };
 
 let offset = 0;
 if (db) onValue(ref(db, ".info/serverTimeOffset"), s => { offset = s.val() || 0; });
@@ -125,20 +125,41 @@ export function makeActions(getCtx) {
     await remove(ref(db, "results/" + q.id));
     await set(ref(db, "game"), { phase: "question", qi, qid: q.id, startAt: t + LEAD_MS, endsAt: t + LEAD_MS + Number(q.time || 10) * 1000, base, rev: (g().rev || 0) + 1 });
   }
+  // 마감: 여러 관리자 화면이 동시에 눌러도 한 번만 처리 (transaction), 마감하면 바로 결과 공개
+  let busy = false;
   async function close() {
     const game = g();
-    if (game.phase !== "question") return;
-    await update(ref(db, "game"), { phase: "closed", endsAt: Math.min(game.endsAt || 0, serverNow()), rev: (game.rev || 0) + 1 });
+    if (game.phase !== "question" || busy) return;
+    busy = true;
+    try {
+      const qid = game.qid;
+      const r = await runTransaction(ref(db, "game"), cur => {
+        if (!cur || cur.phase !== "question" || cur.qid !== qid) return;
+        cur.phase = "closed"; cur.endsAt = Math.min(cur.endsAt || 0, serverNow()); cur.rev = (cur.rev || 0) + 1;
+        return cur;
+      });
+      if (r.committed) await doReveal(qid);
+    } finally { busy = false; }
   }
+  async function doReveal(qid) {
+    const q = qs().find(x => x.id === qid);
+    if (!q) return;
+    const gs = (await get(ref(db, "game"))).val() || {};
+    const [v, p, pr] = await Promise.all([get(ref(db, "votes/" + q.id)), get(ref(db, "players")), get(ref(db, "presence"))]);
+    const result = computeResult(getCtx().cfg, q, v.val(), p.val(), pr.val(), gs.base);
+    await set(ref(db, "results/" + q.id), result);
+    await runTransaction(ref(db, "game"), cur => {
+      if (!cur || cur.qid !== qid || !["question", "closed"].includes(cur.phase)) return;
+      cur.phase = "reveal"; cur.rev = (cur.rev || 0) + 1;
+      return cur;
+    });
+  }
+  // 수동 결과 공개 (마감 상태에서 멈췄을 때 대비)
   async function reveal() {
     const game = g();
-    if (!["question", "closed", "reveal"].includes(game.phase)) return;
-    const q = qs()[game.qi];
-    if (!q) return;
-    const [v, p, pr] = await Promise.all([get(ref(db, "votes/" + q.id)), get(ref(db, "players")), get(ref(db, "presence"))]);
-    const result = computeResult(getCtx().cfg, q, v.val(), p.val(), pr.val(), game.base);
-    await set(ref(db, "results/" + q.id), result);
-    await update(ref(db, "game"), { phase: "reveal", rev: (game.rev || 0) + 1 });
+    if (!["question", "closed"].includes(game.phase)) return;
+    if (game.phase === "question") return close();
+    await doReveal(game.qid);
   }
   const setPhase = phase => update(ref(db, "game"), { phase, rev: (g().rev || 0) + 1 });
   const A = {
@@ -172,31 +193,47 @@ export function makeActions(getCtx) {
       await remove(ref(db, "presence/" + uid));
     },
     // 단계별 다음 동작 (스페이스바, 큰 버튼)
+    // 흐름: 대기 → 문제 → (시간 끝, 자동 마감 + 결과 공개) → 다음 문제 ... 순위는 따로 버튼
+    isLast() { return (g().qi ?? -1) + 1 >= qs().length; },
     primaryLabel() {
-      const game = g(), last = (game.qi ?? -1) + 1 >= qs().length;
-      return ({ lobby: (game.qi ?? -1) >= 0 ? "이어서 다음 문제" : "첫 문제 시작", question: "지금 마감", closed: "결과 공개", reveal: "순위 보기", leaderboard: last ? "최종 결과" : "다음 문제", final: "대기 화면으로" })[game.phase] || "첫 문제 시작";
+      const game = g(), last = A.isLast();
+      return ({ lobby: (game.qi ?? -1) >= 0 ? "이어서 다음 문제" : "첫 문제 시작", question: "지금 마감하고 결과 보기", closed: "결과 공개", reveal: last ? "최종 결과 보기" : "다음 문제", leaderboard: last ? "최종 결과 보기" : "다음 문제", final: "대기 화면으로" })[game.phase] || "첫 문제 시작";
     },
     async primary() {
       const game = g();
       switch (game.phase) {
         case "question": return close();
         case "closed": return reveal();
-        case "reveal": return A.leaderboard();
+        case "reveal":
         case "leaderboard": return A.next();
         case "final": return A.lobby();
         default: return (game.qi ?? -1) >= 0 ? A.next() : start(0);
       }
-    }
+    },
+    canBoard() { return ["reveal", "lobby"].includes(g().phase) && Object.keys(getCtx().results || {}).length > 0; }
   };
   return A;
 }
 
-// 시간이 지나면 자동 마감 (관리자 화면이 열려 있을 때)
+// 시간이 지나면 자동 마감 + 결과 공개 (관리자 화면이 열려 있을 때)
+// 마감 상태에서 4초 넘게 멈춰 있으면(마감한 창이 꺼진 경우) 다른 관리자 창이 결과를 공개
 export function autoClose(getCtx, actions) {
   setInterval(() => {
     const game = getCtx().game;
-    if (game && game.phase === "question" && serverNow() > game.endsAt + 300) actions.close().catch(() => {});
+    if (!game) return;
+    if (game.phase === "question" && serverNow() > game.endsAt + 300) actions.close().catch(() => {});
+    else if (game.phase === "closed" && serverNow() > (game.endsAt || 0) + 4000) actions.reveal().catch(() => {});
   }, 300);
+}
+
+// 남은 예상 시간(초): 문제당 준비 3초 + 제한 시간 + 결과 보고 넘기기 약 20초
+export function remainingSeconds(cfg, game) {
+  const qs = questionsOf(cfg);
+  const from = game && ["question", "closed"].includes(game.phase) ? game.qi : (game?.qi ?? -1) + 1;
+  let sec = 0;
+  for (let i = Math.max(0, from); i < qs.length; i++) sec += 3 + Number(qs[i].time || 10) + 20;
+  if (game && game.phase === "question") sec -= Math.max(0, Math.min(Number(qs[game.qi]?.time || 10) + 3, (serverNow() - (game.startAt - LEAD_MS)) / 1000));
+  return Math.max(0, Math.round(sec));
 }
 
 // 관리자 로그인 확인: admins/{uid} 가 true 인지
