@@ -259,7 +259,7 @@ export function mountLogin(el, onDone) {
   const st = document.createElement("style");
   st.textContent = `.login{max-width:380px;margin:12vh auto;padding:0 20px;display:flex;flex-direction:column;gap:8px}
   .login h1{margin:0 0 4px;font-size:26px}.login p{margin:0 0 12px;color:var(--sub);line-height:1.6}
-  .login label{font-size:14px;font-weight:700;margin-top:6px}.login input{padding:12px;border:1px solid var(--line);border-radius:10px}
+  .login label{font-size:14px;font-weight:700;margin-top:6px}.login input{padding:12px;border:1px solid var(--line);border-radius:var(--r)}
   .login .err{color:var(--fail);min-height:1.2em;margin:6px 0}`;
   el.appendChild(st);
   el.querySelector("#loginForm").addEventListener("submit", async e => {
