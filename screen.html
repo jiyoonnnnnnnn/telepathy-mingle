@@ -11,13 +11,16 @@
 html,body{overflow:hidden}
 #root{height:100%}
 body{background:var(--paper)}
-.scr{height:100%;display:grid;grid-template-rows:auto 1fr auto}
+.scr{height:100%;display:grid;grid-template-rows:auto 1fr}
 .tbar{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:18px 40px;border-bottom:1px solid var(--line)}
 .tbar h1{margin:0;font-size:22px;font-weight:900;letter-spacing:-0.02em}
 .tbar .meta{display:flex;gap:24px;align-items:center;font-size:17px;color:var(--sub)}
 .tbar .meta b{color:var(--ink);font-size:20px}
 .stage{position:relative;padding:32px 48px;min-height:0;overflow:hidden;display:flex;flex-direction:column}
-.ctrl{display:flex;align-items:center;gap:10px;padding:14px 40px;border-top:1px solid var(--line);background:var(--soft);flex-wrap:wrap}
+/* 조작줄: 참가자에게 깔끔한 화면을 보여 주려고 평소엔 숨기고, 마우스를 움직이면 나타나요 */
+.ctrl{position:fixed;left:0;right:0;bottom:0;z-index:8;display:flex;align-items:center;gap:10px;padding:14px 40px;border-top:1px solid var(--line);background:rgba(245,247,241,.97);flex-wrap:wrap;transform:translateY(100%);transition:transform .25s ease}
+.ctrl.show,.ctrl:focus-within{transform:none}
+.peek{position:fixed;right:16px;bottom:12px;z-index:7;font-size:13px;color:var(--sub);opacity:.55}
 .ctrl .sp{flex:1}
 .ctrl .hint{font-size:14px;color:var(--sub)}
 .ctrl .btn.primary{padding:13px 26px;font-size:17px}
@@ -75,31 +78,37 @@ body{background:var(--paper)}
 @keyframes stamp{0%{transform:scale(2.2) rotate(-6deg);opacity:0}100%{transform:rotate(-3deg);opacity:1}}
 .dim .opt{filter:saturate(.5);opacity:.55}
 
-/* 결과 공개 */
-.rv{flex:1;display:flex;flex-direction:column;gap:22px;min-height:0}
+/* 결과 공개: 전체 선택 비율을 크게, 팀 카드는 아래에 작게 */
+.rv{flex:1;display:flex;flex-direction:column;gap:20px;min-height:0}
 .rvtop{display:flex;justify-content:space-between;align-items:flex-end;gap:24px}
-.rvtop h2{margin:0;font-size:clamp(30px,3.6vw,54px);font-weight:900;letter-spacing:-0.03em;line-height:1.2}
-.rvtop .sum{font-size:22px;color:var(--sub);text-align:right}
-.rvtop .sum b{font-size:44px;color:var(--lime-deep);font-weight:900}
-.overall{display:flex;height:42px;border-radius:12px;overflow:hidden;font-weight:800;font-size:17px}
-.overall div{display:flex;align-items:center;padding:0 14px;white-space:nowrap;transition:flex-grow 1s cubic-bezier(.2,1,.3,1)}
-.cards{flex:1;display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:12px;align-content:start;overflow:auto}
-.rc{border-radius:16px;padding:14px 16px;display:flex;flex-direction:column;gap:8px;min-height:132px;background:var(--ink);color:#fff}
+.rvtop h2{margin:0;font-size:clamp(28px,3.2vw,48px);font-weight:900;letter-spacing:-0.03em;line-height:1.2}
+.rvtop .sum{font-size:20px;color:var(--sub);text-align:right;white-space:nowrap}
+.rvtop .sum b{font-size:40px;color:var(--lime-deep);font-weight:900}
+.ratio{display:flex;gap:12px;min-height:clamp(120px,22vh,210px)}
+.rb{flex-grow:1;flex-basis:0;min-width:140px;border-radius:20px;padding:18px 24px;display:flex;flex-direction:column;justify-content:space-between;gap:10px;transition:flex-grow 1s cubic-bezier(.2,1,.3,1);overflow:hidden}
+.rb .lb{display:flex;gap:10px;align-items:baseline;font-size:clamp(18px,1.8vw,26px);font-weight:800;line-height:1.25;min-width:0}
+.rb .lb i{font-style:normal;opacity:.65;flex:none}
+.rb .lb em{font-style:normal;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rb .bt{display:flex;align-items:baseline;justify-content:space-between;gap:12px}
+.rb .pct{font-size:clamp(44px,5.2vw,92px);font-weight:900;line-height:1;letter-spacing:-0.03em;font-variant-numeric:tabular-nums}
+.rb .cnt{font-size:clamp(16px,1.4vw,20px);font-weight:700;opacity:.75;white-space:nowrap}
+.rb.top{box-shadow:0 0 0 4px var(--paper),0 0 0 7px var(--ink)}
+.cards{flex:1;display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px;align-content:start;overflow:auto}
+.rc{border-radius:14px;padding:12px 14px;display:flex;flex-direction:column;gap:6px;min-height:100px;background:var(--ink);color:#fff}
 .rc .h{display:flex;justify-content:space-between;align-items:baseline}
-.rc .h b{font-size:20px}
-.rc .st{font-size:34px;font-weight:900;font-variant-numeric:tabular-nums}
-.rc .mini{display:flex;gap:10px;font-size:15px;font-weight:700}
+.rc .h b{font-size:18px}
+.rc .h span{font-size:14px;opacity:.7}
+.rc .st{font-size:28px;font-weight:900;font-variant-numeric:tabular-nums}
+.rc .mini{display:flex;gap:10px;font-size:14px;font-weight:700}
 .rc .mini span{opacity:.6}
 .rc .mini span.pk{opacity:1;text-decoration:underline;text-underline-offset:3px}
 .rc.wait .st{opacity:.35}
-.rc.shake{animation:shake .25s infinite}
-@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-3px) rotate(-.6deg)}75%{transform:translateX(3px) rotate(.6deg)}}
-.rc.flip{animation:flip .42s ease-in-out}
+.rc.flip{animation:flip .3s ease-in-out}
 @keyframes flip{0%{transform:scaleX(1)}50%{transform:scaleX(0)}100%{transform:scaleX(1)}}
 .rc.ok{background:var(--lime);color:var(--ink)}
 .rc.no{background:var(--soft);color:var(--sub);border:1px solid var(--line)}
-.rc.no .st{font-size:26px}
-.rc.all{box-shadow:0 0 0 4px var(--paper),0 0 0 7px var(--lime-deep)}
+.rc.no .st{font-size:22px}
+.rc.all{box-shadow:0 0 0 3px var(--paper),0 0 0 6px var(--lime-deep)}
 .drum{font-size:30px;font-weight:900;color:var(--sub)}
 
 /* 순위 */
@@ -308,14 +317,16 @@ const curQ = () => questionsOf(S.cfg)[S.game?.qi] || null;
 function buildShell() {
   root.innerHTML = `<div class="scr">
     <header class="tbar"><h1 id="ttl">텔레파시 게임</h1>
-      <div class="meta"><span id="phaseName"></span><span>참여 <b id="onl" class="num">0</b>명</span></div></header>
+      <div class="meta"><span id="prog" class="num"></span><span id="phaseName"></span><span>참여 <b id="onl" class="num">0</b>명</span></div></header>
     <section class="stage" id="stage"></section>
-    <footer class="ctrl">
+    <div class="peek" id="peek">마우스를 움직이면 진행 버튼이 나와요</div>
+    <footer class="ctrl" id="ctrl">
       <button class="btn primary" id="cPrimary" type="button">시작</button>
+      <button class="btn" id="cBoard" type="button">순위 보기 (R)</button>
       <button class="btn" id="cTime" type="button">시간 +5초</button>
       <button class="btn" id="cRestart" type="button">이 문제 다시</button>
       <button class="btn" id="cLobby" type="button">대기 화면</button>
-      <span class="hint">스페이스바로 다음 단계, F키로 전체 화면</span>
+      <span class="hint">스페이스바: 다음 단계, R: 순위, F: 전체 화면</span>
       <span class="sp"></span>
       <button class="btn snd" id="cSnd" type="button" aria-pressed="false">소리 켜기</button>
       <a class="btn" href="admin.html" target="_blank" rel="noopener">관리자 페이지</a>
@@ -323,7 +334,18 @@ function buildShell() {
   const busy = fn => async () => { try { await fn(); } catch (e) { console.error(e); } };
   document.getElementById("cPrimary").onclick = busy(() => actions.primary());
   document.getElementById("cTime").onclick = busy(() => actions.addTime());
-  document.getElementById("cRestart").onclick = busy(() => actions.restart());
+  document.getElementById("cBoard").onclick = busy(() => actions.leaderboard());
+  // 실수 방지: 두 번 눌러야 실행
+  const rb = document.getElementById("cRestart"); let armed = false, at;
+  rb.onclick = busy(async () => {
+    if (!armed) { armed = true; rb.textContent = "한 번 더 누르면 다시 시작"; at = setTimeout(() => { armed = false; rb.textContent = "이 문제 다시"; }, 3000); return; }
+    clearTimeout(at); armed = false; rb.textContent = "이 문제 다시"; await actions.restart();
+  });
+  // 조작줄 자동 숨김
+  const ctrl = document.getElementById("ctrl"), peek = document.getElementById("peek"); let ht;
+  const showCtrl = () => { ctrl.classList.add("show"); peek.style.display = "none"; clearTimeout(ht); ht = setTimeout(() => { if (!ctrl.matches(":hover")) ctrl.classList.remove("show"); }, 3000); };
+  addEventListener("mousemove", showCtrl);
+  ctrl.addEventListener("mouseleave", () => { clearTimeout(ht); ht = setTimeout(() => ctrl.classList.remove("show"), 1500); });
   document.getElementById("cLobby").onclick = busy(() => actions.lobby());
   const snd = document.getElementById("cSnd");
   snd.onclick = () => {
@@ -333,6 +355,7 @@ function buildShell() {
   addEventListener("keydown", e => {
     if (e.target.closest("input,textarea,select")) return;
     if (e.code === "Space" || e.code === "Enter") { e.preventDefault(); document.getElementById("cPrimary").click(); }
+    if ((e.key === "r" || e.key === "R") && !document.getElementById("cBoard").disabled) { e.preventDefault(); document.getElementById("cBoard").click(); }
     if (e.key === "f" || e.key === "F") { (document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen()).catch(() => {}); }
   });
 }
@@ -341,11 +364,14 @@ function render(force) {
   if (!S.cfg || !S.game) return;
   const g = S.game, ph = g.phase;
   document.getElementById("ttl").textContent = S.cfg.title || "텔레파시 게임";
-  document.getElementById("phaseName").textContent = (g.qi >= 0 && ph !== "lobby" ? `Q${g.qi + 1} ` : "") + (PHASE_NAME[ph] || "");
+  const total = questionsOf(S.cfg).length;
+  document.getElementById("prog").textContent = g.qi >= 0 && ph !== "lobby" ? `Q${g.qi + 1} / ${total}` : `${total}문제`;
+  document.getElementById("phaseName").textContent = PHASE_NAME[ph] || "";
   document.getElementById("onl").textContent = onlineIds().length;
   document.getElementById("cPrimary").textContent = actions.primaryLabel();
   document.getElementById("cTime").disabled = ph !== "question";
   document.getElementById("cRestart").disabled = !(g.qi >= 0 && ["question", "closed", "reveal"].includes(ph));
+  document.getElementById("cBoard").disabled = !actions.canBoard();
   let key = ph + ":" + g.qid + ":" + (g.rev || 0);
   if (ph === "question") key += serverNow() < g.startAt ? ":lead" : ":open";
   if (["reveal", "leaderboard", "final"].includes(ph)) key += S.results[g.qid] ? ":r" : ":wait";
@@ -422,7 +448,7 @@ function vQuestion(prev) {
   update();
 }
 
-/* 결과 공개: 두구두구 뒤 카드가 차례로 뒤집혀요 */
+/* 결과 공개: 짧은 두구두구 뒤 전체 비율이 커지고, 팀 카드가 빠르게 뒤집혀요 */
 let revealTimers = [];
 function vReveal() {
   revealTimers.forEach(clearTimeout); revealTimers = [];
@@ -434,19 +460,25 @@ function vReveal() {
   const played = teams.filter(t => r.teams[t.id].voted > 0);
   const okN = played.filter(t => r.teams[t.id].success).length;
   const tot = opts.map((_, i) => teams.reduce((a, t) => a + (Number((r.teams[t.id].counts || [])[i]) || 0), 0));
-  const totSum = tot.reduce((a, b) => a + b, 0) || 1;
+  const totSum = tot.reduce((a, b) => a + b, 0);
+  const pct = tot.map(n => totSum ? Math.round(n / totSum * 100) : 0);
+  const topI = totSum ? tot.indexOf(Math.max(...tot)) : -1;
   stage.innerHTML = `<div class="rv">
     <div class="rvtop"><h2>${esc(r.text)}</h2><div class="sum" id="sum"><span class="drum">두구두구</span></div></div>
-    <div class="overall" id="overall">${opts.map((o, i) => `<div class="o${i}" style="flex-grow:1">${LETTERS[i]} ${esc(o)} <span class="num" data-pct="${Math.round(tot[i] / totSum * 100)}" style="margin-left:8px">?</span></div>`).join("")}</div>
-    <div class="cards">${teams.map(t => `<div class="rc wait shake" data-t="${esc(t.id)}"><div class="h"><b>${esc(t.name)}</b><span class="num">${r.teams[t.id].voted}명</span></div><div class="st">?</div><div class="mini"></div></div>`).join("")}</div></div>`;
-  const ROLL = 2200;
+    <div class="ratio" id="ratio">${opts.map((o, i) => `<div class="rb o${i}"><div class="lb"><i>${LETTERS[i]}</i><em>${esc(o)}</em></div><div class="bt"><span class="pct" data-to="${pct[i]}">0%</span><span class="cnt">${tot[i]}명</span></div></div>`).join("")}</div>
+    <div class="cards">${teams.map(t => `<div class="rc wait" data-t="${esc(t.id)}"><div class="h"><b>${esc(t.name)}</b><span class="num">${r.teams[t.id].voted}명</span></div><div class="st">?</div><div class="mini"></div></div>`).join("")}</div></div>`;
+  const ROLL = 1000;
   Snd.stop(); Snd.drumroll(ROLL / 1000);
   revealTimers.push(setTimeout(() => {
     Snd.cymbal();
-    document.querySelectorAll("#overall > div").forEach((d, i) => { d.style.flexGrow = Math.max(tot[i], totSum * .04); const s = d.querySelector("[data-pct]"); s.textContent = s.dataset.pct + "%"; });
-    document.getElementById("sum").innerHTML = `${played.length}팀 중<br><b class="num">${okN}팀</b> 텔레파시 성공`;
+    document.querySelectorAll("#ratio .rb").forEach((d, i) => {
+      d.style.flexGrow = totSum ? Math.max(tot[i], totSum * .12) : 1;
+      if (i === topI) d.classList.add("top");
+      const el = d.querySelector(".pct"), to = +el.dataset.to, t0 = performance.now();
+      (function f(t) { const k = Math.min(1, (t - t0) / 800); el.textContent = Math.round(to * (1 - Math.pow(1 - k, 3))) + "%"; if (k < 1) requestAnimationFrame(f); })(t0);
+    });
+    document.getElementById("sum").innerHTML = `${played.length}팀 중 <b class="num">${okN}팀</b> 성공`;
     const cards = [...document.querySelectorAll(".rc")];
-    cards.forEach(c => c.classList.remove("shake"));
     cards.forEach((c, idx) => revealTimers.push(setTimeout(() => {
       const tr = r.teams[c.dataset.t];
       const counts = Array.isArray(tr.counts) ? tr.counts : Object.values(tr.counts || {});
@@ -455,14 +487,13 @@ function vReveal() {
         c.classList.remove("wait");
         c.classList.add(tr.success ? "ok" : "no");
         if (tr.all) c.classList.add("all");
-        c.querySelector(".st").textContent = tr.voted === 0 ? "미참여" : tr.success ? (tr.all ? "전원 일치 +" : "+") + tr.points : "실패";
+        c.querySelector(".st").textContent = tr.voted === 0 ? "미참여" : tr.success ? (tr.all ? "전원 +" : "+") + tr.points : "실패";
         c.querySelector(".mini").innerHTML = counts.map((n, i) => `<span class="${i === tr.pick ? "pk" : ""}">${LETTERS[i]} ${n}</span>`).join("");
-        if (tr.success) Snd.pop();
-      }, 210);
-    }, 140 * idx)));
+      }, 150);
+    }, 600 + 50 * idx)));
     revealTimers.push(setTimeout(() => {
-      if (okN > 0) { Snd.win(); confetti(okN * 18 + 40); flash(); } else Snd.lose();
-    }, 140 * cards.length + 300));
+      if (okN > 0) { Snd.win(); confetti(okN * 14 + 40); flash(); } else Snd.lose();
+    }, 600 + 50 * cards.length + 250));
   }, ROLL));
 }
 
