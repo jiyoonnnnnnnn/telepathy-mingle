@@ -23,7 +23,7 @@ h2{margin:0;font-size:19px}
 .status span{color:var(--sub)}
 .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
 .url{display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:15px}
-.url code{background:var(--soft);padding:8px 12px;border-radius:8px;word-break:break-all}
+.url code{background:var(--soft);padding:8px 12px;border-radius:var(--r);word-break:break-all}
 table{width:100%;border-collapse:collapse;font-size:15px}
 th{text-align:left;font-size:13px;color:var(--sub);font-weight:700;padding:8px 10px;border-bottom:1px solid var(--line)}
 td{padding:9px 10px;border-bottom:1px solid var(--line);vertical-align:middle}
@@ -32,7 +32,7 @@ td.n{font-variant-numeric:tabular-nums}
 .ok{color:var(--lime-deep);font-weight:800}
 .no{color:var(--fail);font-weight:700}
 .x{border:0;background:none;color:var(--sub);font-size:14px;text-decoration:underline;padding:4px}
-input.t,select.t{padding:9px 10px;border:1px solid var(--line);border-radius:8px;background:var(--paper);width:100%}
+input.t,select.t{padding:9px 10px;border:1px solid var(--line);border-radius:var(--r);background:var(--paper);width:100%}
 .qitem{display:grid;grid-template-columns:40px 1fr;gap:14px;padding:18px 0;border-bottom:1px solid var(--line)}
 .qitem .no2{font-size:20px;font-weight:900;color:var(--lime-deep);padding-top:8px}
 .qgrid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
@@ -47,7 +47,7 @@ label.s{font-size:13px;color:var(--sub);display:block;margin-bottom:4px;font-wei
 /* 진행 콘솔 */
 .console{display:flex;flex-direction:column;gap:22px}
 .cgrid{display:grid;grid-template-columns:minmax(0,1.7fr) minmax(0,1fr);gap:24px;align-items:start}
-.now{border:1px solid var(--line);border-radius:16px;padding:20px 22px;display:flex;flex-direction:column;gap:12px}
+.now{border:1px solid var(--line);border-radius:var(--r-l);padding:20px 22px;display:flex;flex-direction:column;gap:12px}
 .nowtop{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap}
 .nowtop .prog{font-size:15px;font-weight:800;color:var(--lime-deep);font-variant-numeric:tabular-nums}
 .nowtop .phase{font-size:26px;font-weight:900}
@@ -55,16 +55,16 @@ label.s{font-size:13px;color:var(--sub);display:block;margin-bottom:4px;font-wei
 .nowtop .timer.hurry{color:var(--fail)}
 .qnow{margin:0;font-size:19px;font-weight:700;line-height:1.4}
 .meter{display:flex;align-items:center;gap:12px;font-size:15px;color:var(--sub)}
-.meter .bar{flex:1;height:10px;background:var(--line);border-radius:5px;overflow:hidden}
+.meter .bar{flex:1;height:10px;background:var(--line);border-radius:2px;overflow:hidden}
 .meter .bar i{display:block;height:100%;width:0;background:var(--lime);transition:width .3s}
 .meter b{color:var(--ink);font-variant-numeric:tabular-nums}
 .guide{display:flex;flex-direction:column;gap:14px;padding:4px 2px}
 .lab{display:block;font-size:13px;font-weight:800;color:var(--sub);margin-bottom:4px}
 .guide p{margin:0;font-size:17px;line-height:1.55}
-.guide .say{background:var(--lime-soft);border-left:4px solid var(--lime);padding:10px 14px;border-radius:0 10px 10px 0;font-weight:600}
+.guide .say{background:var(--lime-soft);border-left:4px solid var(--lime);padding:10px 14px;border-radius:0;font-weight:600}
 .alertline{margin:0;font-size:15px;font-weight:700;color:var(--fail);min-height:1.2em}
 .alertline.good{color:var(--lime-deep)}
-.btn.huge{width:100%;padding:18px;font-size:20px;border-radius:14px}
+.btn.huge{width:100%;padding:18px;font-size:20px;border-radius:var(--r-l)}
 .keys{font-size:13px;color:var(--sub)}
 .info{display:flex;flex-direction:column;gap:16px;border-left:1px solid var(--line);padding-left:22px}
 .info p{margin:0;font-size:16px;line-height:1.5}
